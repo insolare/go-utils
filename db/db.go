@@ -31,10 +31,10 @@ import (
 
 	"github.com/eliona-smart-building-assistant/go-utils/common"
 	"github.com/eliona-smart-building-assistant/go-utils/log"
-	"github.com/jackc/pgconn"
-	"github.com/jackc/pgtype"
-	"github.com/jackc/pgx/v4"
-	"github.com/jackc/pgx/v4/pgxpool"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgtype"
+	"github.com/jackc/pgx/v5/pgxpool"
 	_ "github.com/volatiletech/sqlboiler/v4/drivers/sqlboiler-psql/driver"
 )
 
@@ -302,7 +302,7 @@ func NewInitPool() *pgxpool.Pool {
 }
 
 func newPool(config *pgxpool.Config) *pgxpool.Pool {
-	pool, err := pgxpool.ConnectConfig(context.Background(), config)
+	pool, err := pgxpool.NewWithConfig(context.Background(), config)
 	if err != nil {
 		log.Fatal("Database", "Unable to create pool for database: %v", err)
 	}
@@ -499,23 +499,15 @@ func Exec(connection Connection, sql string, args ...interface{}) error {
 	return err
 }
 
-func EmptyJsonIsNull[T any](any *T) pgtype.JSON {
-	if any == nil {
-		return pgtype.JSON{Status: pgtype.Null}
-	}
-	bytes, _ := json.Marshal(*any)
-	return pgtype.JSON{Bytes: bytes, Status: pgtype.Present}
-}
-
 func EmptyFloatIsNull(float *float64) pgtype.Float8 {
 	return FloatIsNull(float, 0)
 }
 
 func FloatIsNull(float *float64, null float64) pgtype.Float8 {
 	if float == nil || *float == null {
-		return pgtype.Float8{Status: pgtype.Null}
+		return pgtype.Float8{Valid: false}
 	}
-	return pgtype.Float8{Float: *float, Status: pgtype.Present}
+	return pgtype.Float8{Float64: *float, Valid: true}
 }
 
 func EmptyStringIsNull[T any](string *T) pgtype.Text {
@@ -524,9 +516,9 @@ func EmptyStringIsNull[T any](string *T) pgtype.Text {
 
 func StringIsNull[T any](s *T, null string) pgtype.Text {
 	if s == nil || fmt.Sprintf("%v", *s) == null {
-		return pgtype.Text{Status: pgtype.Null}
+		return pgtype.Text{Valid: false}
 	}
-	return pgtype.Text{String: fmt.Sprintf("%v", *s), Status: pgtype.Present}
+	return pgtype.Text{String: fmt.Sprintf("%v", *s), Valid: true}
 }
 
 func EmptyLongIntIsNull(int *int64) pgtype.Int8 {
@@ -535,9 +527,9 @@ func EmptyLongIntIsNull(int *int64) pgtype.Int8 {
 
 func LongIntIsNull(int *int64, null int64) pgtype.Int8 {
 	if int == nil || *int == null {
-		return pgtype.Int8{Status: pgtype.Null}
+		return pgtype.Int8{Valid: false}
 	}
-	return pgtype.Int8{Int: *int, Status: pgtype.Present}
+	return pgtype.Int8{Int64: *int, Valid: true}
 }
 
 func EmptyIntIsNull(int *int32) pgtype.Int4 {
@@ -546,9 +538,9 @@ func EmptyIntIsNull(int *int32) pgtype.Int4 {
 
 func IntIsNull(int *int32, null int32) pgtype.Int4 {
 	if int == nil || *int == null {
-		return pgtype.Int4{Status: pgtype.Null}
+		return pgtype.Int4{Valid: false}
 	}
-	return pgtype.Int4{Int: *int, Status: pgtype.Present}
+	return pgtype.Int4{Int32: *int, Valid: true}
 }
 
 func EmptySmallIntIsNull(int *int16) pgtype.Int2 {
@@ -557,9 +549,9 @@ func EmptySmallIntIsNull(int *int16) pgtype.Int2 {
 
 func SmallIntIsNull(int *int16, null int16) pgtype.Int2 {
 	if int == nil || *int == null {
-		return pgtype.Int2{Status: pgtype.Null}
+		return pgtype.Int2{Valid: false}
 	}
-	return pgtype.Int2{Int: *int, Status: pgtype.Present}
+	return pgtype.Int2{Int16: *int, Valid: true}
 }
 
 // Begin returns a new transaction

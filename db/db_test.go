@@ -17,10 +17,11 @@ package db
 
 import (
 	"fmt"
-	"github.com/eliona-smart-building-assistant/go-utils/log"
-	"github.com/pashagolub/pgxmock"
-	"github.com/stretchr/testify/assert"
 	"testing"
+
+	"github.com/eliona-smart-building-assistant/go-utils/log"
+	"github.com/pashagolub/pgxmock/v5"
+	"github.com/stretchr/testify/assert"
 )
 
 type Temperature struct {
@@ -57,7 +58,7 @@ func TestPointer(t *testing.T) {
 	rows := mock.NewRows([]string{"temperature", "remark", "day_of_week"}).
 		AddRow(nil, "Cloudy", 4)
 	mock.ExpectQuery("select (.+) from weather").WillReturnRows(rows)
-	weather, err := QuerySingleRow[Weather](mock, "select value, unit from weather")
+	weather, err := QuerySingleRow[Weather](mock, "select value, unit from weather;")
 	assert.Nil(t, err)
 	assert.Equal(t, "", weather.Temperature.Unit)
 	assert.Equal(t, "Cloudy", *weather.Remark)
@@ -74,7 +75,7 @@ func TestQuery(t *testing.T) {
 
 	resultsChan := make(chan Temperature)
 	go func() {
-		err := Query(mock, "select value, unit from temperatures", resultsChan)
+		err := Query(mock, "select value, unit from temperatures;", resultsChan)
 		if err != nil {
 			assert.Nil(t, err)
 		}
@@ -92,8 +93,8 @@ func TestQuery(t *testing.T) {
 
 func TestQuerySingleRowError(t *testing.T) {
 	mock := connectionMock()
-	mock.ExpectQuery("select.+from temperatures").WillReturnError(fmt.Errorf("error"))
-	result, err := QuerySingleRow[Temperature](mock, "select value, unit from temperatures")
+	mock.ExpectQuery("select (.+) from temperatures").WillReturnError(fmt.Errorf("error"))
+	result, err := QuerySingleRow[Temperature](mock, "select value, unit from temperatures;")
 	assert.Equal(t, fmt.Errorf("error"), err)
 	assert.Equal(t, result.Value, 0)
 }
@@ -103,17 +104,17 @@ func TestQuerySingleRow(t *testing.T) {
 	rows := mock.NewRows([]string{"value", "unit"}).
 		AddRow(25, "Celsius")
 	mock.ExpectQuery("select (.+) from temperatures").WillReturnRows(rows)
-	result, err := QuerySingleRow[Temperature](mock, "select value, unit from temperatures")
+	result, err := QuerySingleRow[Temperature](mock, "select value, unit from temperatures;")
 	assert.Nil(t, err)
 	assert.Equal(t, result, Temperature{25, "Celsius"})
 }
 
 func TestQueryError(t *testing.T) {
 	mock := connectionMock()
-	mock.ExpectQuery("select.+from temperatures").WillReturnError(fmt.Errorf("error"))
+	mock.ExpectQuery("select (.+) from temperatures").WillReturnError(fmt.Errorf("error"))
 	resultsChan := make(chan Temperature)
 	go func() {
-		err := Query(mock, "select value, unit from temperatures", resultsChan)
+		err := Query(mock, "select value, unit from temperatures;", resultsChan)
 		if err != nil {
 			assert.Equal(t, fmt.Errorf("error"), err)
 		}
